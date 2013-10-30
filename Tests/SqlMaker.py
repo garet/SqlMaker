@@ -104,5 +104,47 @@ class TestClassA(unittest.TestCase):
         obj.Where('col2=%s', 'val2')
         self.assertEqual('WHERE \rcol1=%s\rAND col2=%s\r', str(obj))
         
+    def test_where_3(self):
+        obj = SqlMaker()
+        obj.WhereOr('col1=%s', 'val1')
+        self.assertEqual('WHERE \rcol1=%s\r', str(obj))
+        
+    def test_where_4(self):
+        obj = SqlMaker()
+        obj.WhereOr('col1=%s', 'val1')
+        obj.WhereOr('col2=%s', 'val2')
+        self.assertEqual('WHERE \rcol1=%s\rOR col2=%s\r', str(obj))
+        
+    def test_where_5(self):
+        obj = SqlMaker()
+        obj.Where('col1=%s', 'val1')
+        obj.Where('col2=%s', 'val2')
+        obj.WhereOr('col3=%s', 'val3')
+        self.assertEqual('WHERE \rcol1=%s\rAND col2=%s\rOR col3=%s\r', str(obj))
+        
+    def test_where_6(self):
+        obj = SqlMaker()
+        obj.Where('col1=%s', 'val1')
+        obj.Where('col2=%s', 'val2')
+        obj.WhereOr('col3=%s', 'val3')
+        obj.Where('col4=%s', 'val4')
+        self.assertEqual('WHERE \rcol1=%s\rAND col2=%s\rOR col3=%s\rAND col4=%s\r', str(obj))
+        
+    def test_where_7(self):
+        obj = SqlMaker()
+        obj.Where('col1=%s', 'val1')
+        obj.Where('(col2=%s', 'val2')
+        obj.WhereOr('col3=%s)', 'val3')
+        obj.Where('col4=%s', 'val4')
+        self.assertEqual('WHERE \rcol1=%s\rAND (col2=%s\rOR col3=%s)\rAND col4=%s\r', str(obj))
+        
+    def test_where_8(self):
+        obj = SqlMaker()
+        obj.Where('(col1=%s', 'val1')
+        obj.Where('(col2=%s', 'val2')
+        obj.WhereOr('col3=%s))', 'val3')
+        obj.Where('col4=%s', 'val4')
+        self.assertEqual('WHERE \r(col1=%s\rAND (col2=%s\rOR col3=%s))\rAND col4=%s\r', str(obj))
+        
 if __name__ == "__main__":
     unittest.main()

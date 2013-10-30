@@ -6,7 +6,8 @@ Created on 29 окт. 2013 г.
 
 
 class SqlMaker:
-    def __init__(self, conn=None, type_db=None, pref='', debug=False):
+    def __init__(self, conn=None, type_db=None, pref='', debug=False, 
+                 fetch_type='dict'):
         self.__sql = ''
         self.__params = []
         self.__count_params = 0
@@ -16,10 +17,15 @@ class SqlMaker:
         self.__type_db = type_db
         self.__conn = conn
         self.__pref = pref
+        self.__fetch_type = fetch_type
         
     def __str__(self):
         return self.__sql
     
+    def __del__(self):
+        pass
+    
+    # Not tested
     def DebugPrint(self):
         str_tmp = 'SQL: \r{0}\r'
         str_tmp += 'Count params: {1}\r'
@@ -59,6 +65,19 @@ class SqlMaker:
         self.__sql += 'FROM {0}\r'.format(result)
         return self
 
+    # Not tested
+    def Limit(self, limit, offset = None):
+        if type(limit) != int or (type(offset) != int and offset != None):
+            raise Exception('SqlBuilder.Limit: Params might only Integer!')
+        if offset != None:
+            if self.__type_db != 'pg':
+                self.__sql += 'LIMIT {0},{1} \r'.format(limit, offset)
+            else:
+                self.__sql += 'LIMIT {0} OFFSET {1} \r'.format(limit, offset)
+        else:
+            self.__sql += 'LIMIT {0} \r'.format(limit)
+        return self
+
     def Update(self, table, *args):
         result = ''
         if len(args) == 0:
@@ -67,12 +86,21 @@ class SqlMaker:
             if type(item) != dict:
                 raise Exception("SqlMaker: Argument 'Update' can`t be not dict.")
             values = item.popitem()
-            result += '{0} = {1}, '.format(values[0], '%s')
+            result += '{0} = {1}, '.format(values[0], self.Placeholder())
             self.__params.append(values[1])
             self.__count_params += 1
         result = result.strip(', ')
         sql_tmp = 'UPDATE {0} SET {1}\r'
         self.__sql += sql_tmp.format(table, result)
+        return self
+    
+    # Not tested
+    def OrderBy(self, *args):
+        str_params = ''
+        for param in args:
+            str_params += '{0}, '.format(param)
+        str_params = str_params.strip(', ')
+        self.__sql += 'ORDER BY {0}\r'.format(str_params)
         return self
     
     # Not tested
@@ -99,8 +127,7 @@ class SqlMaker:
     def Delete(self, table):
         self.__sql += 'DELETE FROM {0}\r'.format(table)
         return self
-    
-    # Not tested
+
     def Where(self, condict, param=None):
         if self.__start_where:
             self.__sql += 'AND {0}\r'.format(condict)
@@ -111,8 +138,7 @@ class SqlMaker:
             self.__count_params += 1
             self.__params.append(param)
         return self
-    
-    # Not tested
+
     def WhereOr(self, condict, param=None):
         if self.__start_where:
             self.__sql += 'OR {0}\r'.format(condict)
@@ -123,11 +149,12 @@ class SqlMaker:
             self.__count_params += 1
             self.__params.append(param)
         return self
-    
+
     # Not tested
     def Command(self, sql, *args):
         # Clear all existed command
         self.Clear()
+        # Append sql
         self.__sql = sql
         for param in args:
             self.__params.append(param)
@@ -140,7 +167,7 @@ class SqlMaker:
         for arg in args:
             values = arg.popitem()
             result += '{0},'.format(values[0])
-            params += '{0},'.format('%s')
+            params += '{0},'.format(self.Placeholder())
             self.__params.append(values[1])
             self.__count_params += 1
         result = result.strip(', ')
@@ -169,7 +196,7 @@ class SqlMaker:
             else:
                 self.__cursor.execute(self.__sql)
         except Exception as e:
-            print('Error: {0}'.format(e.args))
+            print('Error: {0}'.format(e))
             self.__conn.rollback()
             self.Clear()
             return False
@@ -179,10 +206,39 @@ class SqlMaker:
         return True
     
     def FetchOne(self):
-        return self.__cursor.fetchone()
+        if self.__fetch_type == 'dict':
+            rows = self.__cursor.fetchone()
+            if rows is None: return False
+            cols = []
+            unknow_column_num = 0
+            for d in self.__cursor.description:
+                if d[0] == '?column?':
+                    cols.append('column_{0}'.format(unknow_column_num))
+                    unknow_column_num += 1
+                else:
+                    cols.append(d[0])
+            return dict(zip(cols, rows))
+        else:
+            return self.__cursor.fetchone()
 
     def FetchAll(self):
-        return self.__cursor.fetchall()
+        if self.__fetch_type == 'dict':
+            rows_list = self.__cursor.fetchall()
+            result = []
+            for rows in rows_list:
+                if rows is None: return False
+                cols = []
+                unknow_column_num = 0
+                for d in self.__cursor.description:
+                    if d[0] == '?column?':
+                        cols.append('column_{0}'.format(unknow_column_num))
+                        unknow_column_num += 1
+                    else:
+                        cols.append(d[0])
+                result.append(dict(zip(cols, rows)))
+            return result
+        else:
+            return self.__cursor.fetchall()
 
     def Clear(self):
         self.__start_where = False
@@ -190,3 +246,6 @@ class SqlMaker:
         del(self.__params)
         self.__params = []
         self.__sql = ''
+        
+    def Placeholder(self):
+        return '%s'
