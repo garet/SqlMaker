@@ -215,9 +215,9 @@ class SqlMaker:
             for d in self.__cursor.description:
                 if d[0] == '?column?':
                     cols.append('column_{0}'.format(unknow_column_num))
-                    unknow_column_num += 1
                 else:
                     cols.append(d[0])
+                unknow_column_num += 1
             return dict(zip(cols, rows))
         else:
             return self.__cursor.fetchone()
