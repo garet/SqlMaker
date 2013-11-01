@@ -18,6 +18,7 @@ class SqlMaker:
         self.__conn = conn
         self.__pref = pref
         self.__fetch_type = fetch_type
+        self.__return_id = 'id'
         
     def __str__(self):
         return self.__sql
@@ -123,7 +124,6 @@ class SqlMaker:
         self.__sql += 'FULL JOIN {0} ON {1}\r'.format(table, condict)
         return self
     
-    # Not tested
     def Delete(self, table):
         self.__sql += 'DELETE FROM {0}\r'.format(table)
         return self
@@ -178,6 +178,7 @@ class SqlMaker:
         return self
 
     def Execute(self, *args):
+        result = True
         self.__sql = self.__sql.replace('{pref}', self.__pref).strip() + ';'
         if self.__debug:
             print(self.__sql)
@@ -188,7 +189,7 @@ class SqlMaker:
         if self.__cursor != None:
             self.__cursor.close()
         else:
-            self.__cursor == None
+            self.__cursor = None
         self.__cursor = self.__conn.cursor()
         try:
             if self.__count_params > 0:
@@ -201,9 +202,9 @@ class SqlMaker:
             self.Clear()
             return False
         else:
-            self.__conn.commit()
+            result = self.__conn.commit()
             self.Clear()
-        return True
+        return result
     
     def FetchOne(self):
         if self.__fetch_type == 'dict':
@@ -240,6 +241,19 @@ class SqlMaker:
         else:
             return self.__cursor.fetchall()
 
+    # Not tested
+    def InsertId(self):
+        if self.__type_db == 'pg':
+            return self.FetchOne()[self.__return_id]
+        else: 
+            return self.__cursor.lastrowid()
+    
+    # Not tested
+    def ReturnId(self, return_id = 'id'):
+        self.__return_id = return_id
+        self.__sql += ' RETURNING {0}'.format(return_id)
+        return self
+        
     def Clear(self):
         self.__start_where = False
         self.__count_params = 0

@@ -146,5 +146,10 @@ class TestClassA(unittest.TestCase):
         obj.Where('col4=%s', 'val4')
         self.assertEqual('WHERE \r(col1=%s\rAND (col2=%s\rOR col3=%s))\rAND col4=%s\r', str(obj))
         
+    def test_delete_1(self):
+        obj = SqlMaker()
+        obj.Delete('table')
+        self.assertEqual('DELETE FROM table\r', str(obj))
+        
 if __name__ == "__main__":
     unittest.main()
