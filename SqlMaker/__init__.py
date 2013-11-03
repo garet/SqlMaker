@@ -179,7 +179,9 @@ class SqlMaker:
 
     def Execute(self, *args):
         result = True
-        self.__sql = self.__sql.replace('{pref}', self.__pref).strip() + ';'
+        self.__sql = self.__sql.replace('{pref}', self.__pref)
+        self.__sql = self.__sql.replace('{ph}', self.Placeholder)
+        self.__sql = self.__sql.strip() + ';'
         if self.__debug:
             print(self.__sql)
             print()

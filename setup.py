@@ -9,7 +9,7 @@ from os.path import join, dirname
 
 setup(
     name='SqlMaker',
-    version='0.1.3a',
+    version='0.1.4a',
     packages=find_packages(),
     long_description=open(join(dirname(__file__), 'README.txt')).read(),
 )
