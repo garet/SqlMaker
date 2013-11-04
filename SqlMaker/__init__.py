@@ -166,10 +166,14 @@ class SqlMaker:
         params = ''
         for arg in args:
             values = arg.popitem()
-            result += '{0},'.format(values[0])
-            params += '{0},'.format(self.Placeholder())
-            self.__params.append(values[1])
-            self.__count_params += 1
+            if type(values[1]) == SqlFunc:
+                result += '{0},'.format(values[0])
+                params += '{0},'.format(values[1])
+            else:
+                result += '{0},'.format(values[0])
+                params += '{0},'.format(self.Placeholder())
+                self.__params.append(values[1])
+                self.__count_params += 1
         result = result.strip(', ')
         params = params.strip(', ')
         
@@ -177,7 +181,15 @@ class SqlMaker:
         self.__sql += sql_tmp.format(table, result, params)
         return self
 
-    def Execute(self, *args):
+    def Rollback(self):
+        self.__conn.rollback()
+        return self
+
+    def Commite(self):
+        self.__conn.commit()
+        return self
+
+    def Execute(self, commite=True, rollback=True, *args):
         result = True
         self.__sql = self.__sql.replace('{pref}', self.__pref)
         self.__sql = self.__sql.replace('{ph}', self.Placeholder())
@@ -188,23 +200,24 @@ class SqlMaker:
         for param in args:
             self.__params.append(param)
             self.__count_params += 1
-        if self.__cursor != None:
-            self.__cursor.close()
-        else:
-            self.__cursor = None
-        self.__cursor = self.__conn.cursor()
+        if self.__cursor == None:
+            self.__cursor = self.__conn.cursor()
         try:
             if self.__count_params > 0:
                 self.__cursor.execute(self.__sql, self.__params)
             else:
                 self.__cursor.execute(self.__sql)
         except Exception as e:
-            print('Error: {0}'.format(e))
-            self.__conn.rollback()
+            print('Error: \r{0}'.format(e))
+            if rollback:
+                self.__conn.rollback()
+                self.__cursor.close()
+                self.__cursor = None
             self.Clear()
             return False
         else:
-            result = self.__conn.commit()
+            if commite:
+                result = self.__conn.commit()
             self.Clear()
         return result
     
@@ -251,9 +264,10 @@ class SqlMaker:
             return self.__cursor.lastrowid()
     
     # Not tested
-    def ReturnId(self, return_id = 'id'):
-        self.__return_id = return_id
-        self.__sql += ' RETURNING {0}'.format(return_id)
+    def AddReturnId(self, return_id = 'id'):
+        if self.__type_db == 'pg':
+            self.__return_id = return_id
+            self.__sql += ' RETURNING {0}'.format(return_id)
         return self
         
     def Clear(self):
@@ -265,3 +279,22 @@ class SqlMaker:
         
     def Placeholder(self):
         return '%s'
+  
+class SqlFunc:
+    def __init__(self, func=''):
+        self.__str = func
+        
+    def __str__(self):
+        return self.__str
+    
+class SqlFuncs:
+    __str = ''
+    Now = SqlFunc('NOW()')
+    Date = SqlFunc('DATE()')
+    
+    def __str__(self):
+        return self.__str
+    
+    #def NOW(self):
+    #    self.__str = 'NOW()'
+    #    return self
