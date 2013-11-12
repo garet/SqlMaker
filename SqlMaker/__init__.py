@@ -189,7 +189,7 @@ class SqlMaker:
         self.__conn.commit()
         return self
 
-    def Execute(self, commite=True, rollback=True, *args):
+    def Execute(self, commit=True, rollback=True, *args):
         result = True
         self.__sql = self.__sql.replace('{pref}', self.__pref)
         self.__sql = self.__sql.replace('{ph}', self.Placeholder())
