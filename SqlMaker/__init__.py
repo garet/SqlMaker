@@ -185,7 +185,7 @@ class SqlMaker:
         self.__conn.rollback()
         return self
 
-    def Commite(self):
+    def Commit(self):
         self.__conn.commit()
         return self
 
@@ -216,7 +216,7 @@ class SqlMaker:
             self.Clear()
             return False
         else:
-            if commite:
+            if commit:
                 result = self.__conn.commit()
             self.Clear()
         return result
